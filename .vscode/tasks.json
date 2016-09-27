@@ -4,6 +4,6 @@
     "version": "0.1.0",
     "command": "lua64",
     "isShellCommand": true,
-    "args": ["tracing\\main.lua"],
+    "args": ["tracing\\htn_attack.lua"],
     "showOutput": "always"
 }

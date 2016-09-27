@@ -6,13 +6,11 @@
 function deepcopy(a)
     if type(a)=="table" then
         local copy={}
-        print("Copy")
         for key,var in next,a,nil do
             copy[key]=deepcopy(var)
         end
         return copy
     else
-        print(a)
         return a
     end
 end
@@ -47,26 +45,51 @@ end
 
 function htn_internal(domain,state,tasks,plan)
     --次のタスクがなければプラン確定
-    if next(task)==nil then
+    if next(tasks)==nil then
         return plan
     end
     --タスクがあれば処理する
     --先頭のタスク(実行するタスク)を一つ
     local task=table.remove(tasks,1)
-
-
-    local task
+    local taskName=table.remove(task,1)
+    --プリミティブタスクがあった場合
+    --分割不可のタスク
+    if domain.primitive[taskName]~=nil then
+        --現在の状態の実体をコピー
+        local newState=deepcopy(state)
+        --プリミティブタスクの実行
+        local res=domain.primitive[taskName](newState,table.unpack(task))
+        --実行した結果がtrueであれば、そのタスクを深堀せずに、
+        --次のタスクを実行する
+        if res == true then
+            return htn_internal(domain,newState,tasks,array_merge(plan,{{taskName,table.unpack(task)}}))
+        else
+            return false
+        end
+        
+    --分割可能な抽象タスク
+    elseif domain.compound[taskName]~=nil then
+    --一つの抽象タスクに含まれている関数の個数分
+    --ループする
+    for i,func in ipairs(domain.compound[taskName]) do
+            --それぞれの抽象タスクを実行
+            local res=func(state,table.unpack(task))
+            
+            --結果が偽じゃなければプラン生成の続行
+            if res ~= false then
+                --先ほどの抽象タスクを実行した結果をtableに追加して
+                --HTNの再起
+                res = htn_internal(domain,state,array_merge(res,tasks),plan)
+                --その結果がfalseではない(空ではない)場合は、
+                --そのプランを返す
+                if res ~= false then
+                    return res
+                end
+            end
+        end
+    end
+    return false
 end
 
-state = {}
-state.hasTarget = 2
-state.hasAmmo = 1
-state.hasMagazine = 5
-state.canSeeTarget = 4
-state.atTarget = 3
 
-for key,var in next,state,nil do
-    print(var)
-end
 
-a=deepcopy(state)
