@@ -8,107 +8,70 @@
 
 require("htn")
 
+--defined
+--[[
+	実装部分：
+	
+		攻撃(attack):
+			遠距離攻撃：
+				攻撃準備(attackPrepare) > energyShot
+
+		攻撃準備(attackPrepare)：
+			エネルギーは溜まっているか(IsEnergy):false
+				敵が視界にいるか(IsTargeting):true
+					視界外に移動する movingHide > chargeEnergy > attackPrepare
+				:false
+					チャージ chargeEnergy > attackPrepare
+			:true
+				敵が視界にいるか(IsTargeting):true
+					準備オーケー {}
+				:false
+					ターゲットを探す searchTarget > attackPrepare
+
+
+]]
+--[[
+	state:
+		bTargeting		--ターゲットを捉えているか
+		chargedEnergy	--エネルギーがチャージされているか
+
+--utility:
+	IsEnergy
+	IsTargeting
+
+--primitive:
+	energyShot
+	movingHide
+	chargeEnergy
+	searchTarget
+
+--compound:
+	attack
+	attackPrepare
+
+
+]]
+
 
 domain = { primitive={}, compound={} }
 
 --------------------------------------------------
 -- Primitive Task
 
--- 近接攻撃
-domain.primitive.melee = function(state)
-	if state.hasTarget == true and state.atTarget == true then
-		state.hasTarget = false
-		state.atTarget = false
-		return true
-	end
-	return false
-end
-
--- 射撃
-domain.primitive.shot = function(state)
-	if state.hasTarget == true and state.hasAmmo == true and state.canSeeTarget == true then
-		state.hasTarget = false
-		state.canSeeTarget = false
-		return true
-	end
-	return false
-end
-
--- リロード
-domain.primitive.reload = function(state)
-	if state.hasAmmo == false and state.hasMagazine == true then
-		state.hasAmmo = true
-		state.hasMagazine = false
-		return true
-	end
-	return false
-end
-
--- ターゲットまで移動する
-domain.primitive.moveToTarget = function(state)
-	if state.atTarget == false then
-		state.atTarget = true
-		return true
-	end
-	return false
-end
-
--- 射撃可能な場所へ移動する
-domain.primitive.moveToShootingPoint = function(state)
-	if state.hasAmmo == true and state.canSeeTarget == false then
-		state.canSeeTarget = true
-		return true
-	end
-	return false
-end
 
 
 --------------------------------------------------
 -- Compound Task
 
 -- ターゲットを倒す
-domain.compound.killTarget = {
-	-- 射撃
-	function(state)
-		return {{"prepareShooting"}, {"shot"}}
-	end,
-	-- 近接攻撃
-	function(state)
-		if state.atTarget == true then
-			return {{"melee"}}
-		end
-		return {{"moveToTarget"}, {"melee"}}
-	end
-}
 
--- 射撃準備をする
-domain.compound.prepareShooting = {
-	function(state)
-		if state.hasAmmo == false then
-			if state.hasMagazine == true then
-				return {{"reload"}, {"prepareShooting"}}
-			else
-				return false
-			end
-		elseif state.canSeeTarget == false then
-			return {{"moveToShootingPoint"}, {"prepareShooting"}}
-		end
-		
-		-- 準備完了
-		return {}
-	end
-}
 
 
 --------------------------------------------------
 -- State
 
 state = {}
-state.hasTarget = true
-state.hasAmmo = false
-state.hasMagazine = true
-state.canSeeTarget = false
-state.atTarget = false
+
 
 plan = htn(domain, state, {{"killTarget"}})
 print_plan(plan)
